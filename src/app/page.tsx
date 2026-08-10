@@ -8,7 +8,7 @@ import { ChatProvider } from "@/context/ChatContext";
 export default function Home() {
   return (
   <ChatProvider>
-    <div className="min-h-screen flex flex-col bg-[var(--background)]">
+    <div className="h-screen flex flex-col bg-[var(--background)] overflow-hidden">
       {/* Top nav */}
       <header className="shrink-0 h-14 border-b border-[var(--border)] flex items-center px-6 gap-3">
         <span className="text-xl">🚀</span>
@@ -38,8 +38,8 @@ export default function Home() {
           <AsteroidFeed />
         </aside>
 
-        {/* Chat panel */}
-        <section className="flex-1 flex flex-col min-w-0 bg-[var(--background)]">
+        {/* Chat panel — flex-1 + h-0 trick forces it to fill without overflowing */}
+        <section className="flex-1 flex flex-col min-w-0 h-full bg-[var(--background)]">
           <ChatWindow />
         </section>
       </main>

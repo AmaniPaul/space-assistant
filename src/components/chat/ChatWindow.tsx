@@ -6,6 +6,7 @@ import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
 import { useChatContext } from "@/context/ChatContext";
+import { useChatHistory } from "@/hooks/useChatHistory";
 
 const WELCOME_MESSAGE: Message = {
   id: "welcome",
@@ -34,8 +35,9 @@ async function fetchAIResponse(messages: Message[]): Promise<string> {
 }
 
 export default function ChatWindow() {
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const { messages, setMessages, clearHistory } = useChatHistory(WELCOME_MESSAGE);
   const [isLoading, setIsLoading] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { registerSend } = useChatContext();
 
@@ -83,13 +85,18 @@ export default function ChatWindow() {
         setIsLoading(false);
       }
     },
-    [isLoading, messages]
+    [isLoading, messages, setMessages]
   );
 
   // Register handleSend into context so other components can trigger a message
   useEffect(() => {
     registerSend(handleSend);
   }, [handleSend, registerSend]);
+
+  const handleClear = () => {
+    clearHistory();
+    setShowClearConfirm(false);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -106,9 +113,39 @@ export default function ChatWindow() {
             Powered by IBM Granite · watsonx.ai
           </p>
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-[var(--muted)]">Online</span>
+        <div className="ml-auto flex items-center gap-3">
+          {/* Clear history button */}
+          {messages.length > 1 && (
+            showClearConfirm ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--muted)]">Clear history?</span>
+                <button
+                  onClick={handleClear}
+                  className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                title="Clear chat history"
+              >
+                Clear
+              </button>
+            )
+          )}
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs text-[var(--muted)]">Online</span>
+          </div>
         </div>
       </div>
 
