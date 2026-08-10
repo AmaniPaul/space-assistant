@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Placeholder chat API route
-// TODO: Replace mock logic with real IBM watsonx.ai / Granite call
-// using the `ibm-watsonx-ai` Python backend or the watsonx SDK directly.
-
 export interface ChatRequestBody {
   messages: { role: "user" | "assistant"; content: string }[];
 }
+
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,17 +18,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const lastUserMessage = messages
-      .filter((m) => m.role === "user")
-      .at(-1)?.content ?? "";
+    // Proxy to the Python FastAPI backend
+    const backendRes = await fetch(`${BACKEND_URL}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages }),
+    });
 
-    // ---------------------------------------------------------------
-    // PLACEHOLDER — swap this block for a real watsonx.ai Granite call
-    // ---------------------------------------------------------------
-    const reply = `You asked: "${lastUserMessage}"\n\nThis is a placeholder response. Once connected to IBM watsonx.ai and Granite, I'll answer with real AI-powered space knowledge. 🚀`;
-    // ---------------------------------------------------------------
+    if (!backendRes.ok) {
+      const err = await backendRes.json().catch(() => ({}));
+      console.error("[/api/chat] Backend error:", err);
+      return NextResponse.json(
+        { error: (err as { detail?: string }).detail ?? "Backend error" },
+        { status: backendRes.status }
+      );
+    }
 
-    return NextResponse.json({ reply });
+    const data = await backendRes.json() as { reply: string };
+    return NextResponse.json({ reply: data.reply });
   } catch (error) {
     console.error("[/api/chat] Error:", error);
     return NextResponse.json(

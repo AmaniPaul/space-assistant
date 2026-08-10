@@ -14,27 +14,22 @@ const WELCOME_MESSAGE: Message = {
   timestamp: new Date(),
 };
 
-// Placeholder AI response — will be replaced with real watsonx.ai / Granite call
 async function fetchAIResponse(messages: Message[]): Promise<string> {
-  const lastMessage = messages[messages.length - 1].content.toLowerCase();
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: messages.map(({ role, content }) => ({ role, content })),
+    }),
+  });
 
-  // Simulated responses for scaffolding purposes
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-
-  if (lastMessage.includes("iss") || lastMessage.includes("space station")) {
-    return "The International Space Station (ISS) orbits Earth at approximately 408 km altitude, traveling at 27,600 km/h. It completes one full orbit every 90 minutes! 🛸\n\nRight now, there are likely 7 crew members aboard conducting scientific experiments. You can track the ISS live using the Open Notify API — I'll be connected to it soon!";
-  }
-  if (lastMessage.includes("james webb") || lastMessage.includes("jwst")) {
-    return "The James Webb Space Telescope (JWST) is the most powerful space telescope ever built! 🔭\n\nLaunched on December 25, 2021, it observes the universe in infrared light, allowing it to see through dust clouds and observe the earliest galaxies — some formed just 300 million years after the Big Bang.";
-  }
-  if (lastMessage.includes("asteroid")) {
-    return "Great question! NASA's Center for Near Earth Object Studies (CNEOS) tracks thousands of asteroids. 🪨\n\nMost near-Earth asteroids are completely harmless, but NASA monitors them closely. I'll be connected to the NASA NeoWs API soon to show you real-time asteroid data!";
-  }
-  if (lastMessage.includes("astronomy picture") || lastMessage.includes("apod")) {
-    return "NASA's Astronomy Picture of the Day (APOD) is one of the most popular websites on the internet! 🌌\n\nEvery day, a professional astronomer selects a stunning image of our universe and provides an explanation. Once I'm connected to the NASA APOD API, I'll show you today's image with an explanation tailored for everyone!";
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error ?? "Request failed");
   }
 
-  return "That's a fascinating space question! 🌠\n\nI'm currently in demo mode — once connected to IBM watsonx.ai and NASA APIs, I'll be able to give you detailed, real-time answers about anything in the cosmos. Try asking about the ISS, James Webb Telescope, asteroids, or the astronomy picture of the day!";
+  const data = await res.json() as { reply: string };
+  return data.reply;
 }
 
 export default function ChatWindow() {
