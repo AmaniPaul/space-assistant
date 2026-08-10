@@ -1,22 +1,40 @@
 import { NextResponse } from "next/server";
 
-// Placeholder APOD API route
-// TODO: Fetch from https://api.nasa.gov/planetary/apod?api_key=YOUR_KEY
-// and pass the description through Granite for a plain-language summary.
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+
+export interface APODData {
+  title: string;
+  date: string;
+  explanation: string;
+  summary: string;
+  url: string | null;
+  hdurl: string | null;
+  media_type: string;
+  copyright: string | null;
+}
 
 export async function GET() {
-  // ---------------------------------------------------------------
-  // PLACEHOLDER — swap with real NASA APOD fetch + Granite summary
-  // ---------------------------------------------------------------
-  const placeholder = {
-    title: "Astronomy Picture of the Day",
-    date: new Date().toISOString().split("T")[0],
-    explanation:
-      "Connect your NASA API key to see today's astronomy picture with an AI-generated plain-language explanation powered by IBM Granite.",
-    url: null,
-    mediaType: "image",
-  };
-  // ---------------------------------------------------------------
+  try {
+    const res = await fetch(`${BACKEND_URL}/apod`, {
+      // Revalidate once per day — APOD updates at midnight UTC
+      next: { revalidate: 86400 },
+    });
 
-  return NextResponse.json(placeholder);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { detail?: string };
+      return NextResponse.json(
+        { error: err.detail ?? "Backend error" },
+        { status: res.status }
+      );
+    }
+
+    const data = await res.json() as APODData;
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("[/api/apod] Error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

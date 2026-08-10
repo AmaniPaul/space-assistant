@@ -1,18 +1,20 @@
 """
 Space Assistant — FastAPI backend
-Exposes a /chat endpoint that calls IBM Granite via watsonx.ai.
+Exposes /chat and /apod endpoints backed by IBM Granite on watsonx.ai.
 """
 from dotenv import load_dotenv
 load_dotenv()  # loads backend/.env automatically
 
+import os
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 
 from granite_client import chat
-from prompts import SPACE_ASSISTANT_SYSTEM_PROMPT
+from prompts import SPACE_ASSISTANT_SYSTEM_PROMPT, APOD_SUMMARY_PROMPT
 
 
 # ---------------------------------------------------------------------------
@@ -44,6 +46,21 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+# ---------------------------------------------------------------------------
+# APOD models
+# ---------------------------------------------------------------------------
+
+class APODResponse(BaseModel):
+    title: str
+    date: str
+    explanation: str
+    summary: str
+    url: str | None
+    hdurl: str | None
+    media_type: str
+    copyright: str | None
 
 
 # ---------------------------------------------------------------------------
@@ -107,3 +124,49 @@ def chat_endpoint(body: ChatRequest) -> ChatResponse:
         ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/apod", response_model=APODResponse)
+async def apod_endpoint() -> APODResponse:
+    """
+    Fetch today's NASA Astronomy Picture of the Day and return it with
+    a Granite-generated plain-language summary.
+    """
+    nasa_key = os.environ.get("NASA_API_KEY", "DEMO_KEY")
+
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://api.nasa.gov/planetary/apod",
+                params={"api_key": nasa_key, "thumbs": "true"},
+            )
+            resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"NASA API error: {exc}") from exc
+
+    data = resp.json()
+
+    # Generate a plain-language summary with Granite
+    try:
+        prompt = APOD_SUMMARY_PROMPT.format(explanation=data.get("explanation", ""))
+        summary = chat(
+            messages=[{"role": "user", "content": prompt}],
+            system_prompt="You are a friendly space guide for the public.",
+        )
+    except Exception:
+        # Fall back to the raw NASA explanation if Granite is unavailable
+        summary = data.get("explanation", "")
+
+    # Videos return a thumbnail URL under "thumbnail_url" when thumbs=true
+    image_url = data.get("url") if data.get("media_type") == "image" else data.get("thumbnail_url")
+
+    return APODResponse(
+        title=data.get("title", ""),
+        date=data.get("date", ""),
+        explanation=data.get("explanation", ""),
+        summary=summary,
+        url=image_url,
+        hdurl=data.get("hdurl"),
+        media_type=data.get("media_type", "image"),
+        copyright=data.get("copyright"),
+    )
