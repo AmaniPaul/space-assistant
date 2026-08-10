@@ -1,6 +1,7 @@
 import ChatWindow from "@/components/chat/ChatWindow";
 import APODCard from "@/components/APODCard";
 import ISSTracker from "@/components/ISSTracker";
+import AsteroidFeed from "@/components/AsteroidFeed";
 
 export default function Home() {
   return (
@@ -23,11 +24,13 @@ export default function Home() {
 
       {/* Main layout */}
       <main className="flex-1 flex overflow-hidden">
-        {/* Sidebar — APOD + ISS tracker */}
+        {/* Sidebar — APOD + ISS tracker + Asteroid feed */}
         <aside className="hidden lg:flex flex-col w-80 xl:w-96 shrink-0 border-r border-[var(--border)] overflow-y-auto p-5 gap-8 bg-[var(--surface)]">
           <APODCard />
           <div className="border-t border-[var(--border)]" />
           <ISSTracker />
+          <div className="border-t border-[var(--border)]" />
+          <AsteroidFeed />
         </aside>
 
         {/* Chat panel */}

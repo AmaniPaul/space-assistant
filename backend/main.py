@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 
 from granite_client import chat
-from prompts import SPACE_ASSISTANT_SYSTEM_PROMPT, APOD_SUMMARY_PROMPT
+from prompts import SPACE_ASSISTANT_SYSTEM_PROMPT, APOD_SUMMARY_PROMPT, ASTEROID_BLURB_PROMPT
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +51,20 @@ class ChatResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # APOD models
 # ---------------------------------------------------------------------------
+
+class AsteroidItem(BaseModel):
+    id: str
+    name: str
+    date: str
+    miss_km: float
+    miss_lunar: float
+    velocity_kmh: float
+    diameter_min: float
+    diameter_max: float
+    is_hazardous: bool
+    blurb: str
+    nasa_url: str
+
 
 class ISSPosition(BaseModel):
     latitude: float
@@ -181,6 +195,91 @@ async def apod_endpoint() -> APODResponse:
         media_type=data.get("media_type", "image"),
         copyright=data.get("copyright"),
     )
+
+
+@app.get("/asteroids", response_model=list[AsteroidItem])
+async def asteroids_endpoint() -> list[AsteroidItem]:
+    """
+    Fetch this week's near-Earth asteroid flybys from NASA NeoWs and
+    return each one with a Granite-generated plain-language blurb.
+    """
+    nasa_key = os.environ.get("NASA_API_KEY", "DEMO_KEY")
+
+    # Build start/end date range for the current week
+    from datetime import date, timedelta
+    today = date.today()
+    end = today + timedelta(days=7)
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                "https://api.nasa.gov/neo/rest/v1/feed",
+                params={
+                    "start_date": today.isoformat(),
+                    "end_date": end.isoformat(),
+                    "api_key": nasa_key,
+                },
+            )
+            resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"NASA NeoWs API error: {exc}") from exc
+
+    raw = resp.json()
+
+    # Flatten all daily buckets into a single list, sorted by closest approach
+    asteroids: list[AsteroidItem] = []
+    for day_objects in raw.get("near_earth_objects", {}).values():
+        for obj in day_objects:
+            approach = obj["close_approach_data"][0]
+            diam = obj["estimated_diameter"]["meters"]
+
+            name = obj["name"].strip("()")
+            miss_km = float(approach["miss_distance"]["kilometers"])
+            miss_lunar = float(approach["miss_distance"]["lunar"])
+            velocity_kmh = float(approach["relative_velocity"]["kilometers_per_hour"])
+            diameter_min = float(diam["estimated_diameter_min"])
+            diameter_max = float(diam["estimated_diameter_max"])
+            approach_date = approach["close_approach_date"]
+            hazardous = obj.get("is_potentially_hazardous_asteroid", False)
+
+            # Generate a Granite blurb for this asteroid
+            try:
+                blurb = chat(
+                    messages=[{
+                        "role": "user",
+                        "content": ASTEROID_BLURB_PROMPT.format(
+                            name=name,
+                            date=approach_date,
+                            miss_km=f"{miss_km:,.0f}",
+                            miss_lunar=f"{miss_lunar:.2f}",
+                            diameter_min=f"{diameter_min:.0f}",
+                            diameter_max=f"{diameter_max:.0f}",
+                            velocity_kmh=f"{velocity_kmh:,.0f}",
+                            hazardous="Yes" if hazardous else "No",
+                        ),
+                    }],
+                    system_prompt="You are a friendly space guide for the public.",
+                )
+            except Exception:
+                blurb = f"This asteroid will pass Earth at {miss_lunar:.2f} lunar distances — safely by."
+
+            asteroids.append(AsteroidItem(
+                id=obj["id"],
+                name=name,
+                date=approach_date,
+                miss_km=round(miss_km, 1),
+                miss_lunar=round(miss_lunar, 4),
+                velocity_kmh=round(velocity_kmh, 1),
+                diameter_min=round(diameter_min, 1),
+                diameter_max=round(diameter_max, 1),
+                is_hazardous=hazardous,
+                blurb=blurb,
+                nasa_url=obj["nasa_jpl_url"],
+            ))
+
+    # Sort by closest approach distance ascending
+    asteroids.sort(key=lambda a: a.miss_km)
+    return asteroids
 
 
 @app.get("/iss", response_model=ISSPosition)

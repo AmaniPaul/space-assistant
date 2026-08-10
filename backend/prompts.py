@@ -26,3 +26,18 @@ NASA explanation:
 
 Write a friendly, plain-language summary in 2-3 sentences for a general audience. \
 Be enthusiastic and accessible — no jargon. Do not repeat the title. Do not use bullet points."""
+
+ASTEROID_BLURB_PROMPT = """You are Space Assistant. A user is looking at a near-Earth asteroid \
+flyby. Here are the raw facts:
+
+Name: {name}
+Close approach date: {date}
+Miss distance: {miss_km} km ({miss_lunar} lunar distances)
+Diameter estimate: {diameter_min}–{diameter_max} metres
+Relative velocity: {velocity_kmh} km/h
+Potentially hazardous: {hazardous}
+
+Write 1-2 friendly sentences for a general audience that put this flyby in perspective. \
+Use a relatable analogy for the distance or size if helpful. \
+Never cause alarm — reassure the reader if the asteroid is not hazardous. \
+Do not use bullet points or repeat the name verbatim."""
