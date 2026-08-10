@@ -38,15 +38,24 @@ function saveToStorage(messages: Message[]): void {
 }
 
 export function useChatHistory(welcome: Message) {
-  // Initialise lazily from localStorage on first render
-  const [messages, setMessages] = useState<Message[]>(() =>
-    loadFromStorage([welcome])
-  );
+  // Always start with the welcome message — same on server and client,
+  // avoiding a hydration mismatch. localStorage is loaded after mount.
+  const [messages, setMessages] = useState<Message[]>([welcome]);
+  const [hydrated, setHydrated] = useState(false);
 
-  // Persist to localStorage whenever messages change
+  // After hydration, load persisted history from localStorage once
   useEffect(() => {
+    const stored = loadFromStorage([welcome]);
+    setMessages(stored);
+    setHydrated(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist to localStorage whenever messages change (after hydration only)
+  useEffect(() => {
+    if (!hydrated) return;
     saveToStorage(messages);
-  }, [messages]);
+  }, [messages, hydrated]);
 
   const clearHistory = useCallback(() => {
     setMessages([welcome]);

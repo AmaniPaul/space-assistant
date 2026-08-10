@@ -42,7 +42,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         >
           {message.content}
         </div>
-        <span className="text-xs text-[var(--muted)] px-1">
+        <span className="text-xs text-[var(--muted)] px-1" suppressHydrationWarning>
           {formatTime(message.timestamp)}
         </span>
       </div>
