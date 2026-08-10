@@ -52,6 +52,18 @@ class ChatResponse(BaseModel):
 # APOD models
 # ---------------------------------------------------------------------------
 
+class ISSPosition(BaseModel):
+    latitude: float
+    longitude: float
+    altitude_km: float
+    velocity_kmh: float
+    timestamp: int
+
+
+# ---------------------------------------------------------------------------
+# APOD models
+# ---------------------------------------------------------------------------
+
 class APODResponse(BaseModel):
     title: str
     date: str
@@ -69,9 +81,8 @@ class APODResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Warm up the Granite client on startup so the first request isn't slow
-    from granite_client import get_model
-    get_model()
+    # Credentials are validated lazily on the first request, not at startup,
+    # so the server boots successfully even before .env is fully configured.
     yield
 
 
@@ -169,4 +180,29 @@ async def apod_endpoint() -> APODResponse:
         hdurl=data.get("hdurl"),
         media_type=data.get("media_type", "image"),
         copyright=data.get("copyright"),
+    )
+
+
+@app.get("/iss", response_model=ISSPosition)
+async def iss_endpoint() -> ISSPosition:
+    """
+    Return the current ISS position from the Open Notify API.
+    No API key required — open public endpoint.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            resp = await client.get("http://api.open-notify.org/iss-now.json")
+            resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Open Notify API error: {exc}") from exc
+
+    data = resp.json()
+    pos = data["iss_position"]
+
+    return ISSPosition(
+        latitude=float(pos["latitude"]),
+        longitude=float(pos["longitude"]),
+        altitude_km=408.0,    # ISS maintains ~408 km — Open Notify doesn't expose this
+        velocity_kmh=27600.0, # ISS average orbital velocity
+        timestamp=int(data["timestamp"]),
     )

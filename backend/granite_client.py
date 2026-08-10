@@ -7,18 +7,6 @@ from ibm_watsonx_ai import APIClient, Credentials
 from ibm_watsonx_ai.foundation_models import ModelInference
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 
-# ---------------------------------------------------------------------------
-# Configuration — loaded from environment variables (set in .env)
-# ---------------------------------------------------------------------------
-WATSONX_URL = os.environ.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
-WATSONX_API_KEY = os.environ["WATSONX_API_KEY"]
-WATSONX_PROJECT_ID = os.environ["WATSONX_PROJECT_ID"]
-
-# Granite model to use — granite-3-8b-instruct is the recommended chat model
-GRANITE_MODEL_ID = os.environ.get(
-    "GRANITE_MODEL_ID", "ibm/granite-3-8b-instruct"
-)
-
 # Generation parameters
 GENERATE_PARAMS = {
     GenParams.MAX_NEW_TOKENS: 1024,
@@ -29,11 +17,26 @@ GENERATE_PARAMS = {
 
 
 def _build_client() -> ModelInference:
-    """Initialise and return a watsonx.ai ModelInference instance."""
-    credentials = Credentials(url=WATSONX_URL, api_key=WATSONX_API_KEY)
-    api_client = APIClient(credentials=credentials, project_id=WATSONX_PROJECT_ID)
+    """Initialise and return a watsonx.ai ModelInference instance.
+
+    Reads credentials here (not at module level) so that load_dotenv()
+    in main.py has already populated os.environ before these are accessed.
+    """
+    api_key = os.environ.get("WATSONX_API_KEY")
+    project_id = os.environ.get("WATSONX_PROJECT_ID")
+
+    if not api_key:
+        raise KeyError("WATSONX_API_KEY is not set. Add it to backend/.env")
+    if not project_id:
+        raise KeyError("WATSONX_PROJECT_ID is not set. Add it to backend/.env")
+
+    url = os.environ.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
+    model_id = os.environ.get("GRANITE_MODEL_ID", "ibm/granite-3-8b-instruct")
+
+    credentials = Credentials(url=url, api_key=api_key)
+    api_client = APIClient(credentials=credentials, project_id=project_id)
     return ModelInference(
-        model_id=GRANITE_MODEL_ID,
+        model_id=model_id,
         api_client=api_client,
         params=GENERATE_PARAMS,
     )
