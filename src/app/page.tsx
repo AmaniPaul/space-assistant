@@ -2,9 +2,11 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import APODCard from "@/components/APODCard";
 import ISSTracker from "@/components/ISSTracker";
 import AsteroidFeed from "@/components/AsteroidFeed";
+import { ChatProvider } from "@/context/ChatContext";
 
 export default function Home() {
   return (
+  <ChatProvider>
     <div className="min-h-screen flex flex-col bg-[var(--background)]">
       {/* Top nav */}
       <header className="shrink-0 h-14 border-b border-[var(--border)] flex items-center px-6 gap-3">
@@ -46,5 +48,6 @@ export default function Home() {
         </p>
       </footer>
     </div>
+  </ChatProvider>
   );
 }

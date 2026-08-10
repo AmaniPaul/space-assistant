@@ -5,6 +5,7 @@ import { Message } from "@/types/chat";
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
+import { useChatContext } from "@/context/ChatContext";
 
 const WELCOME_MESSAGE: Message = {
   id: "welcome",
@@ -36,6 +37,7 @@ export default function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { registerSend } = useChatContext();
 
   // Auto-scroll to the latest message
   useEffect(() => {
@@ -83,6 +85,11 @@ export default function ChatWindow() {
     },
     [isLoading, messages]
   );
+
+  // Register handleSend into context so other components can trigger a message
+  useEffect(() => {
+    registerSend(handleSend);
+  }, [handleSend, registerSend]);
 
   return (
     <div className="flex flex-col h-full">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useChatContext } from "@/context/ChatContext";
 
 interface APODData {
   title: string;
@@ -21,6 +22,7 @@ type State =
 
 export default function APODCard() {
   const [state, setState] = useState<State>({ status: "loading" });
+  const { sendMessage } = useChatContext();
 
   useEffect(() => {
     fetch("/api/apod")
@@ -111,6 +113,18 @@ export default function APODCard() {
           <p className="text-xs text-[var(--muted)] leading-relaxed">
             {state.data.summary}
           </p>
+
+          {/* Ask about this image button */}
+          <button
+            onClick={() =>
+              sendMessage(
+                `Tell me about today's astronomy picture: "${state.data.title}"`
+              )
+            }
+            className="w-full text-xs py-2 px-3 rounded-lg border border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-dim)] hover:bg-[var(--accent)] hover:text-white transition-colors font-medium"
+          >
+            💬 Ask about this image
+          </button>
 
           {/* Copyright */}
           {state.data.copyright && (
