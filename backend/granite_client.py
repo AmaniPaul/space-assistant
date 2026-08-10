@@ -31,7 +31,7 @@ def _build_client() -> ModelInference:
         raise KeyError("WATSONX_PROJECT_ID is not set. Add it to backend/.env")
 
     url = os.environ.get("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
-    model_id = os.environ.get("GRANITE_MODEL_ID", "ibm/granite-3-8b-instruct")
+    model_id = os.environ.get("GRANITE_MODEL_ID", "ibm/granite-4-h-small")
 
     credentials = Credentials(url=url, api_key=api_key)
     api_client = APIClient(credentials=credentials, project_id=project_id)

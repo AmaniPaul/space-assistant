@@ -112,7 +112,7 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict:
     """Simple liveness check."""
-    return {"status": "ok", "model": "ibm/granite-3-8b-instruct"}
+    return {"status": "ok", "model": "ibm/granite-4-h-small"}
 
 
 @app.post("/chat", response_model=ChatResponse)
