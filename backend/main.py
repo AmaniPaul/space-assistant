@@ -197,6 +197,36 @@ async def apod_endpoint() -> APODResponse:
     )
 
 
+class Astronaut(BaseModel):
+    name: str
+    craft: str
+
+
+class AstronautsResponse(BaseModel):
+    people: list[Astronaut]
+    number: int
+
+
+@app.get("/astronauts", response_model=AstronautsResponse)
+async def astronauts_endpoint() -> AstronautsResponse:
+    """
+    Return the list of humans currently in space via Open Notify.
+    No API key required.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            resp = await client.get("http://api.open-notify.org/astros.json")
+            resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Open Notify API error: {exc}") from exc
+
+    data = resp.json()
+    return AstronautsResponse(
+        people=[Astronaut(name=p["name"], craft=p["craft"]) for p in data["people"]],
+        number=int(data["number"]),
+    )
+
+
 @app.get("/asteroids", response_model=list[AsteroidItem])
 async def asteroids_endpoint() -> list[AsteroidItem]:
     """

@@ -2,6 +2,7 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import APODCard from "@/components/APODCard";
 import ISSTracker from "@/components/ISSTracker";
 import AsteroidFeed from "@/components/AsteroidFeed";
+import AstronautCrew from "@/components/AstronautCrew";
 import { ChatProvider } from "@/context/ChatContext";
 
 export default function Home() {
@@ -31,6 +32,8 @@ export default function Home() {
           <APODCard />
           <div className="border-t border-[var(--border)]" />
           <ISSTracker />
+          <div className="border-t border-[var(--border)]" />
+          <AstronautCrew />
           <div className="border-t border-[var(--border)]" />
           <AsteroidFeed />
         </aside>
